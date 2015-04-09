@@ -44,7 +44,7 @@ dhis2 = {
 		/**
 		 *	Function to be envoked when initializing dhis2 data
 		 *
-		 *	@param config eg. config{ baseUrl,onLoad(function)}
+		 *	@param config eg. config{ baseUrl,refferencePrefix,onLoad(function)}
 		 *
 		 */
 		Init : function(config){
@@ -276,12 +276,12 @@ dhis2.data.Modal = function (modalName,relations) {
 		for (k = 0; k < event.dataValues.length; k++) {
 			var dataValue = event.dataValues[k];
 			var dataElement = self.getDataElement(dataValue.dataElement);
-			if (!dataElement.name.startsWith("Program_")) {//If dataElement is not a foregin key
+			if (!dataElement.name.startsWith(dhis2.config.refferencePrefix)) {//If dataElement is not a foregin key
 				//Set the value in the object
 				selfGet.object[dataElement.name] = dataValue.value;
 			} else {//If dataElement is a foregin key fetch the refferencing program
-				//Remove the Program_ prefix to get the program for reffencing
-				var program = dataElement.name.substring(8);
+				//Remove the refferencePrefix prefix to get the program for reffencing
+				var program = dataElement.name.substring(dhis2.config.refferencePrefix.length);
 				//Initialize the Modal from the program name
 				var programModal = new dhis2.data.Modal(program, []);
 				//Push the RefferenceProgram to hel the fetch
