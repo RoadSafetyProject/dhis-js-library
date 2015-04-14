@@ -8,7 +8,7 @@ Things to consider
 
 #How to use
 
-1.Download the library <a href="">here</a>.
+1.Download the library [here](https://github.com/MorleyMinde/dhis2-js-library/blob/master/dhis2-library.js).
 
 2.Include the script on your html page
 
@@ -25,8 +25,8 @@ Things to consider
 		  }
     }
     
-4. Initialize dhis
+4.Initialize dhis
 
     dhis2.Init(config);
     
-5. Hurray you are done. Have fun Programming.
+5.Hurray you are done. Have fun Programming.
