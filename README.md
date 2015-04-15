@@ -1,5 +1,5 @@
 # dhis2-js-library
-This is a javascript library to access dhis as Modals
+This is a javascript library to access dhis as Modals.
 The main problem it solves is the occurance of foreign keys within programs in dhis
 
 Things to consider
@@ -8,7 +8,7 @@ Things to consider
 
 #How to use
 
-1.Download the library [here](https://github.com/MorleyMinde/dhis2-js-library/blob/master/dhis2-library.js).
+1.Download the library [here](https://github.com/MorleyMinde/dhis2-js-library/archive/master.zip).
 
 2.Include the script on your html page
 
