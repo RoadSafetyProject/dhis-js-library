@@ -132,31 +132,36 @@ dhis2.data.Modal = function (modalName,relations) {
 		var program = self.getProgramByName(self.modalName);
 		// Stores the rows of an entity
 		this.events = [];
-		var selfGet = this;
+		var selfGetAll = this;
 		//Checks that all requests are made
 		this.count = [];
-		this.checkAllResultsFetched = function(){
-			if (selfGet.count.length == 0) {
-				onResult(selfGet.events);
+		this.resultsFetched = function(){
+			if (selfGetAll.count.length == 0) {
+				onResult(selfGetAll.events);
 			}
 		}
 		//Get events of the program from the server
 		get(dhis2.config.baseUrl + "api/events?program="+program.id,function(result){
 			for (j = 0; j < result.events.length; j++) {//For each event render to entity column json
 				var event = result.events[j];
-				selfGet.count.push(1);
+				selfGetAll.count.push(1);
+				
 				//Render events to appropriate Modal
 				self.renderToJSON(event, function(object) {
 					//Push object to events
-					selfGet.events.push(object);
+					
+					//document.getElementById("result").innerHTML += JSON.stringify(selfGet.events) +"<br /><br />";
+					selfGetAll.events.push(object);
+					
 					//Pop count to signify
-					selfGet.count.pop();
+					selfGetAll.count.pop();
+					
 					//Check if all results from the server are fetched
-					selfGet.checkAllResultsFetched();
-				})
+					selfGetAll.resultsFetched();
+				});
 			}
 			//Check if all results from the server are fetched
-			selfGet.checkAllResultsFetched();
+			selfGetAll.resultsFetched();
 		});
 		return;
 	}
@@ -176,7 +181,7 @@ dhis2.data.Modal = function (modalName,relations) {
 		var selfGet = this;
 		//Checks that all requests are made
 		this.count = [];
-		this.checkAllResultsFetched = function(){
+		this.resultsFetched = function(){
 			if (selfGet.count.length == 0) {
 				onResult(selfGet.events);
 			}
@@ -195,13 +200,13 @@ dhis2.data.Modal = function (modalName,relations) {
 							//Pop count to signify
 							selfGet.count.pop();
 							//Check if all results from the server are fetched
-							selfGet.checkAllResultsFetched();
+							selfGet.resultsFetched();
 						});
 					}
 				}
 			}
 			//Check if all results from the server are fetched
-			selfGet.checkAllResultsFetched();
+			selfGet.resultsFetched();
 		});
 		return;
 	}
@@ -237,16 +242,17 @@ dhis2.data.Modal = function (modalName,relations) {
 		//Object that holds the row data
 		this.object = {};
 		this.count = [];
-		var selfGet = this;
+		var selfrenderToJSON = this;
 		//Checks that all requests are made
 		this.count = [];
 		this.checkAllResultsFetched = function(){
-			for (i = 0; i < selfGet.count.length; i++) {
-				if (!selfGet.count[i].isLoaded) {
-					return;
-				}
+			if(selfrenderToJSON.count.length > 0)
+			{
+				selfrenderToJSON.count.pop().fetch();
+			}else{
+				onSuccess(selfrenderToJSON.object);
 			}
-			onSuccess(selfGet.object);
+			
 		}
 		/**
 		 * Helper to fetch refference program
@@ -258,39 +264,44 @@ dhis2.data.Modal = function (modalName,relations) {
 		var RefferenceProgram = function(programModal, id) {
 			this.program = programModal;
 			this.value = id;
-			this.isLoaded = false;
 			this.fetch = function() {
+				
 				var selfProgram = this;
 				//Find the event from the modal being refferenced
 				this.program.find(this.value, function(result) {
 					//Set the field in the json
-					selfGet.object[selfProgram.program.getModalName()] = result;
-					//Set the data is loaded
-					selfProgram.isLoaded = true;
+					selfrenderToJSON.object[selfProgram.program.getModalName()] = result;
+					
 					//Check if all results from the server are fetched
-					selfGet.checkAllResultsFetched();
+					selfrenderToJSON.checkAllResultsFetched();
 				});
 			}
 		}
 		this.object["id"] = event.event;
+		
 		for (k = 0; k < event.dataValues.length; k++) {
+			
 			var dataValue = event.dataValues[k];
 			var dataElement = self.getDataElement(dataValue.dataElement);
 			if (!dataElement.name.startsWith(dhis2.config.refferencePrefix)) {//If dataElement is not a foregin key
 				//Set the value in the object
-				selfGet.object[dataElement.name] = dataValue.value;
+				selfrenderToJSON.object[dataElement.name] = dataValue.value;
 			} else {//If dataElement is a foregin key fetch the refferencing program
+				
 				//Remove the refferencePrefix prefix to get the program for reffencing
 				var program = dataElement.name.substring(dhis2.config.refferencePrefix.length);
+				
 				//Initialize the Modal from the program name
 				var programModal = new dhis2.data.Modal(program, []);
 				//Push the RefferenceProgram to hel the fetch
-				selfGet.count.push(new RefferenceProgram(programModal,
-						dataValue.value));
+				selfrenderToJSON.count.push(new RefferenceProgram(programModal,dataValue.value));
 			}
 		}
 		//Add relations to the object as specified by the relations
+		//
+		
 		for (k = 0; k < relations.length; k++) {//For each relation
+			
 			var relation = relations[k];
 			var programModal = null;
 			if(relation.type == "ONE_MANY"){//If relationship is one to many
@@ -307,26 +318,17 @@ dhis2.data.Modal = function (modalName,relations) {
 			//Override the fetch function to implement a get instead of a find
 			refProgram.fetch = function() {
 				var selfProgram = this;
-				this.program.get({program:self.getModalName(),value:selfGet.object.id}, function(result) {	
-					selfGet.object[selfProgram.program.getModalName()] = result;
-					//Data is loaded
-					selfProgram.isLoaded = true;
+				this.program.get({program:self.getModalName(),value:selfrenderToJSON.object.id}, function(result) {	
+					selfrenderToJSON.object[selfProgram.program.getModalName()] = result;
+					
 					//Check if all results from the server are fetched
-					selfGet.checkAllResultsFetched();
+					selfrenderToJSON.checkAllResultsFetched();
 				});
 			}
 			//Push the RefferenceProgram to hel the fetch
-			selfGet.count.push(refProgram);
+			selfrenderToJSON.count.push(refProgram);
 		}
-		if (selfGet.count.length == 0) {//if Refference programs are not registered for fetching
-			//Callback the success with the object
-			onSuccess(selfGet.object);
-			return;
-		} else {//if Refference programs are registered for fetching
-			for (k = 0; k < selfGet.count.length; k++) {//Fetch each Refference program
-				selfGet.count[k].fetch();
-			}
-		}
+		selfrenderToJSON.checkAllResultsFetched();
 	}
 };
 /**
