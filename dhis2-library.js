@@ -222,19 +222,13 @@ dhis2.data.Modal = function (modalName,relations) {
 		//Get program by name
 		var program = self.getProgramByName(modalName);
 		//Get events of the program from the server
-		get(dhis2.config.baseUrl + "api/events?paging=false&program=" + program.id + "",
+		get(dhis2.config.baseUrl + "api/events/" + uid + ".json",
 				function(result) {
-			for (i = 0; i < result.events.length; i++) {//For each event
-				if (result.events[i].event == uid) {//Checks the id
-					
-					//Render to entity column json
-					self.renderToJSON(result.events[i], function(
-							object) {
-						onResult(object);
-					});
-					return;
-				}
-			}
+			//Render to entity column json
+			self.renderToJSON(result, function(
+					object) {
+				onResult(object);
+			});
 		});
 	}
 
