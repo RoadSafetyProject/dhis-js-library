@@ -134,9 +134,9 @@ dhis2.data.Modal = function (modalName,relations) {
 		this.events = [];
 		var selfGetAll = this;
 		//Checks that all requests are made
-		this.count = [];
+		this.resCount = [];
 		this.resultsFetched = function(){
-			if (selfGetAll.count.length == 0) {
+			if (selfGetAll.resCount.length == 0) {
 				onResult(selfGetAll.events);
 			}
 		}
@@ -144,7 +144,7 @@ dhis2.data.Modal = function (modalName,relations) {
 		get(dhis2.config.baseUrl + "api/events?program="+program.id,function(result){
 			for (j = 0; j < result.events.length; j++) {//For each event render to entity column json
 				var event = result.events[j];
-				selfGetAll.count.push(1);
+				selfGetAll.resCount.push(1);
 				
 				//Render events to appropriate Modal
 				self.renderToJSON(event, function(object) {
@@ -154,7 +154,7 @@ dhis2.data.Modal = function (modalName,relations) {
 					selfGetAll.events.push(object);
 					
 					//Pop count to signify
-					selfGetAll.count.pop();
+					selfGetAll.resCount.pop();
 					
 					//Check if all results from the server are fetched
 					selfGetAll.resultsFetched();
@@ -225,8 +225,7 @@ dhis2.data.Modal = function (modalName,relations) {
 		get(dhis2.config.baseUrl + "api/events/" + uid + ".json",
 				function(result) {
 			//Render to entity column json
-			self.renderToJSON(result, function(
-					object) {
+			self.renderToJSON(result, function(object) {
 				onResult(object);
 			});
 		});
@@ -242,6 +241,7 @@ dhis2.data.Modal = function (modalName,relations) {
 		this.checkAllResultsFetched = function(){
 			if(selfrenderToJSON.count.length > 0)
 			{
+				console.log(JSON.stringify(selfrenderToJSON.count));
 				selfrenderToJSON.count.pop().fetch();
 			}else{
 				onSuccess(selfrenderToJSON.object);
@@ -261,14 +261,14 @@ dhis2.data.Modal = function (modalName,relations) {
 			this.fetch = function() {
 				
 				var selfProgram = this;
-				//Find the event from the modal being refferenced
-				this.program.find(this.value, function(result) {
-					//Set the field in the json
-					selfrenderToJSON.object[selfProgram.program.getModalName()] = result;
-					
-					//Check if all results from the server are fetched
-					selfrenderToJSON.checkAllResultsFetched();
-				});
+					//Find the event from the modal being refferenced
+					this.program.find(this.value, function(result) {
+						//Set the field in the json
+						selfrenderToJSON.object[selfProgram.program.getModalName()] = result;
+						
+						//Check if all results from the server are fetched
+						selfrenderToJSON.checkAllResultsFetched();
+					});
 			}
 		}
 		this.object["id"] = event.event;
@@ -284,7 +284,6 @@ dhis2.data.Modal = function (modalName,relations) {
 				
 				//Remove the refferencePrefix prefix to get the program for reffencing
 				var program = dataElement.name.substring(dhis2.config.refferencePrefix.length);
-				
 				//Initialize the Modal from the program name
 				var programModal = new dhis2.data.Modal(program, []);
 				//Push the RefferenceProgram to hel the fetch
