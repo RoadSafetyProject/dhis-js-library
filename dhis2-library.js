@@ -50,11 +50,11 @@ dhis2 = {
 		Init : function(config){
 			dhis2.config = config;
 			//Fetch dataElements from the dhis server
-			get(dhis2.config.baseUrl + "api/dataElements?paging=false", function(results) {
+			http.get(dhis2.config.baseUrl + "api/dataElements?paging=false", function(results) {
 				//Set the dhis data elements
 				dhis2.data.dataElements = results.dataElements;
 				//Fetch programs from the dhis server
-				get(dhis2.config.baseUrl + "api/programs?paging=false", function(results2) {
+				http.get(dhis2.config.baseUrl + "api/programs?paging=false", function(results2) {
 					//Set the dhis programs
 					dhis2.data.programs = results2.programs;
 					//Load the scripts to use from user
@@ -122,6 +122,20 @@ dhis2.data.Modal = function (modalName,relations) {
 		}
 	}
 	/**
+	 * Get a data element from the list of dhis2 dataElements by its name
+	 * 
+	 * @param string name
+	 * 
+	 * @return dataElement
+	 */
+	this.getDataElementByName = function(name) {
+		for (i = 0; i < dhis2.data.dataElements.length; i++) {
+			if (dhis2.data.dataElements[i].name == name) {
+				return dhis2.data.dataElements[i];
+			}
+		}
+	}
+	/**
 	 * Gets all rows of a program
 	 * 
 	 * @param function onResult (Callback after the result is returned)
@@ -141,7 +155,7 @@ dhis2.data.Modal = function (modalName,relations) {
 			}
 		}
 		//Get events of the program from the server
-		get(dhis2.config.baseUrl + "api/events?program="+program.id,function(result){
+		http.get(dhis2.config.baseUrl + "api/events?program="+program.id,function(result){
 			for (j = 0; j < result.events.length; j++) {//For each event render to entity column json
 				var event = result.events[j];
 				selfGetAll.resCount.push(1);
@@ -180,29 +194,32 @@ dhis2.data.Modal = function (modalName,relations) {
 		this.events = [];
 		var selfGet = this;
 		//Checks that all requests are made
-		this.count = [];
+		this.getCount = [];
 		this.resultsFetched = function(){
-			if (selfGet.count.length == 0) {
+			if (selfGet.getCount.length == 0) {
 				onResult(selfGet.events);
 			}
 		}
 		//Get events of the program from the server
-		get(dhis2.config.baseUrl + "api/events?program="+program.id,function(result2){
+		http.get(dhis2.config.baseUrl + "api/events?program="+program.id,function(result2){
 			for (j = 0; j < result2.events.length; j++) {//For each event render to entity column json
 				var event = result2.events[j];
 				for (k = 0; k < event.dataValues.length; k++) {
 					if(event.dataValues[k].value == where.value){//Checks the conditions provided
-						selfGet.count.push(1);
+						
+						selfGet.getCount.push(1);
 						//Render events to appropriate Modal
 						self.renderToJSON(event, function(object) {
 							//Push object to events
 							selfGet.events.push(object);
 							//Pop count to signify
-							selfGet.count.pop();
+							selfGet.getCount.pop();
 							//Check if all results from the server are fetched
 							selfGet.resultsFetched();
 						});
+						break;
 					}
+					
 				}
 			}
 			//Check if all results from the server are fetched
@@ -222,7 +239,7 @@ dhis2.data.Modal = function (modalName,relations) {
 		//Get program by name
 		var program = self.getProgramByName(modalName);
 		//Get events of the program from the server
-		get(dhis2.config.baseUrl + "api/events/" + uid + ".json",
+		http.get(dhis2.config.baseUrl + "api/events/" + uid + ".json",
 				function(result) {
 			//Render to entity column json
 			self.renderToJSON(result, function(object) {
@@ -241,7 +258,6 @@ dhis2.data.Modal = function (modalName,relations) {
 		this.checkAllResultsFetched = function(){
 			if(selfrenderToJSON.count.length > 0)
 			{
-				console.log(JSON.stringify(selfrenderToJSON.count));
 				selfrenderToJSON.count.pop().fetch();
 			}else{
 				onSuccess(selfrenderToJSON.object);
@@ -312,7 +328,7 @@ dhis2.data.Modal = function (modalName,relations) {
 			refProgram.fetch = function() {
 				var selfProgram = this;
 				this.program.get({program:self.getModalName(),value:selfrenderToJSON.object.id}, function(result) {	
-					selfrenderToJSON.object[selfProgram.program.getModalName()] = result;
+					selfrenderToJSON.object[selfProgram.program.getModalName() + "s"] = result;
 					
 					//Check if all results from the server are fetched
 					selfrenderToJSON.checkAllResultsFetched();
@@ -323,18 +339,95 @@ dhis2.data.Modal = function (modalName,relations) {
 		}
 		selfrenderToJSON.checkAllResultsFetched();
 	}
-};
-/**
- * Asynchronous request to get
- */
-function get(url, callback) {
-	var xmlhttp = new XMLHttpRequest();
-	xmlhttp.onreadystatechange = function() {
-		if (xmlhttp.readyState == 4 && xmlhttp.status == 200) {
-			callback(JSON.parse(xmlhttp.responseText));
+	this.convertToEvent = function(object,otherData){
+		program = self.getProgramByName(self.modalName);
+		var selfConvertToEvent = this;
+		var date = new Date();
+		var event = {
+				program:program.id,
+				dataValues:[]
+		};
+		for(var key in otherData){
+			event[key] = otherData[key];
 		}
+		for(var key in object){
+			var element ={};
+			if(typeof object[key] == "object"){
+            	var dataElement = self.getDataElementByName(dhis2.config.refferencePrefix + key.replace(" ","_"));
+            	if(dataElement != undefined)
+            	{
+            		element.dataElement = dataElement.id;
+                	element.value = object[key].id;
+            	}else{
+            		dataElement = self.getDataElementByName(key);
+            		if(dataElement != undefined)
+                	{
+            			element.dataElement = dataElement.id;
+            			element.value = object[key];
+                	}
+            	}
+            }else if(key.indexOf("_") > -1){
+            	var dataElement = self.getDataElementByName(dhis2.config.refferencePrefix + key.replace(" ","_"));
+            	element.dataElement = dataElement.id;
+    			element.value = object[key];
+            }
+            else{
+            	var dataElement = self.getDataElementByName(key);
+            	element.dataElement = dataElement.id;
+            	element.value = object[key];
+            }
+            event.dataValues.push(element);
+        }
+		return event;
 	}
-	xmlhttp.open("GET", url, true);
-	xmlhttp.setRequestHeader("Content-Type", "application/json");
-	xmlhttp.send(null);
+	this.save = function(data,otherData,onSuccess,onError){
+		var sendData = {};
+		if(Array.isArray(data)){
+			var events = [];
+			
+			for(count = 0; count < data.length;count++){
+				events.push(self.convertToEvent(data[count],otherData));
+			}
+			sendData.events = events;
+		}else{
+			sendData = self.convertToEvent(data,otherData);
+		}
+		//var event = self.convertToEvent(data);
+		console.log("Saving Data:" + JSON.stringify(sendData));
+		http.post(dhis2.config.baseUrl + "api/events",JSON.stringify(sendData),function(results){
+			onSuccess(results);
+		},function(results){
+			onError(results);
+		});
+	}
+};
+
+http = {
+	request:function(url,method,data,onSuccess,onError){
+		var xmlhttp = new XMLHttpRequest();
+		xmlhttp.onreadystatechange = function() {
+			if (xmlhttp.readyState == 4 && xmlhttp.status == 200) {
+				try{
+					onSuccess(JSON.parse(xmlhttp.responseText));
+				}catch(e){
+					if(onError == undefined){
+						console.error(e);
+					}else
+					{
+						onError(e);
+					}
+				}
+				
+			}
+		}
+		xmlhttp.open(method, url, true);
+		xmlhttp.setRequestHeader("Content-Type", "application/json");
+		xmlhttp.send(data);
+	},
+	get:function(url, onSuccess,onError) {
+		this.request(url,"GET",null,onSuccess,onError);
+	},
+	post:function(url, data,onSuccess,onError) {
+		this.request(url,"POST",data,onSuccess,onError);
+	}
 }
