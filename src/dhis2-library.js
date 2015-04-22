@@ -41,27 +41,6 @@ if (typeof String.prototype.endsWith != 'function') {
  * 
  */
 dhis2 = {
-		/**
-		 *	Function to be envoked when initializing dhis2 data
-		 *
-		 *	@param config eg. config{ baseUrl,refferencePrefix,onLoad(function)}
-		 *
-		 */
-		Init : function(config){
-			dhis2.config = config;
-			//Fetch dataElements from the dhis server
-			http.get(dhis2.config.baseUrl + "api/dataElements?paging=false", function(results) {
-				//Set the dhis data elements
-				dhis2.data.dataElements = results.dataElements;
-				//Fetch programs from the dhis server
-				http.get(dhis2.config.baseUrl + "api/programs?paging=false", function(results2) {
-					//Set the dhis programs
-					dhis2.data.programs = results2.programs;
-					//Load the scripts to use from user
-					dhis2.config.onLoad();
-				});
-			});
-		},
 		//Holds specific dhis data and objects related to data
 		data : {
 			
@@ -69,12 +48,33 @@ dhis2 = {
 		
 }
 /**
+ *	Function to be envoked when initializing dhis2 data
+ *	@constructor
+ *	@param config {array} eg. config{ baseUrl,refferencePrefix,onLoad(function)}
+ *
+ */
+dhis2.Init = function(config){
+	dhis2.config = config;
+	//Fetch dataElements from the dhis server
+	http.get(dhis2.config.baseUrl + "api/dataElements?paging=false", function(results) {
+		//Set the dhis data elements
+		dhis2.data.dataElements = results.dataElements;
+		//Fetch programs from the dhis server
+		http.get(dhis2.config.baseUrl + "api/programs?paging=false", function(results2) {
+			//Set the dhis programs
+			dhis2.data.programs = results2.programs;
+			//Load the scripts to use from user
+			dhis2.config.onLoad();
+		});
+	});
+}
+/**
  * 
  *	This is the modal that reflects a program in the database
- *	
- *	@param string modalName (Name of the Program in dhis2 to be mirrored)
+ *	@constructor
+ *	@param modalName {string} Name of the Program in dhis2 to be mirrored
  *
- *	@param array relations (Array of relationships of the program Should be in the form [{"name":"Program Name","type" : "ONE_MANY | MANY_MANY"}])
+ *	@param relations {array}  Array of relationships of the program. Should be in the form [{"name":"Program Name","type" : "ONE_MANY | MANY_MANY"}]
  *
  */
 dhis2.data.Modal = function (modalName,relations) {
@@ -110,9 +110,9 @@ dhis2.data.Modal = function (modalName,relations) {
 	/**
 	 * Get a data element from the list of dhis2 dataElements by its id
 	 * 
-	 * @param string id
+	 * @param id {string} This is the dataElement id
 	 * 
-	 * @return dataElement
+	 * @return {object} The data element as a jsonObject
 	 */
 	this.getDataElement = function(id) {
 		for (i = 0; i < dhis2.data.dataElements.length; i++) {
@@ -124,9 +124,9 @@ dhis2.data.Modal = function (modalName,relations) {
 	/**
 	 * Get a data element from the list of dhis2 dataElements by its name
 	 * 
-	 * @param string name
+	 * @param dataElementName {string} This is the name of the data element
 	 * 
-	 * @return dataElement
+	 * @return {object} The data element as a jsonObject
 	 */
 	this.getDataElementByName = function(name) {
 		for (i = 0; i < dhis2.data.dataElements.length; i++) {
@@ -138,7 +138,7 @@ dhis2.data.Modal = function (modalName,relations) {
 	/**
 	 * Gets all rows of a program
 	 * 
-	 * @param function onResult (Callback after the result is returned)
+	 * @param onResult {function}  Callback function after the result is returned
 	 * 
 	 */
 	this.getAll = function(onResult){
@@ -182,9 +182,9 @@ dhis2.data.Modal = function (modalName,relations) {
 	/**
 	 * Search events of a program
 	 * 
-	 * @param object where (Search criteria)
+	 * @param where {array} Array of search criterias where each element in the array is an object in the form {name,operator,value}
 	 * 
-	 * @param function onResult (Callback after the result is returned)
+	 * @param onResult {function} Callback after the result is returned
 	 * 
 	 */
 	this.get = function(where,onResult){
@@ -230,9 +230,9 @@ dhis2.data.Modal = function (modalName,relations) {
 	/**
 	 * Find events of a program by id
 	 * 
-	 * @param string id
+	 * @param id {string} Identifier of an event
 	 * 
-	 * @param function onResult (Callback after the result is returned)
+	 * @param onResult {function} Callback function after the result is returned.
 	 * 
 	 */
 	this.find = function(uid, onResult) {
@@ -267,9 +267,11 @@ dhis2.data.Modal = function (modalName,relations) {
 		/**
 		 * Helper to fetch refference program
 		 * 
-		 * @param dhis2.data.Modal programModal
+		 * @constructor
 		 * 
-		 * @param string id
+		 * @param programModal {dhis2.data.Modal} Program to fetch from
+		 * 
+		 * @param id {string} Identifier of the event to be fetched from the program
 		 */
 		var RefferenceProgram = function(programModal, id) {
 			this.program = programModal;
@@ -339,6 +341,13 @@ dhis2.data.Modal = function (modalName,relations) {
 		}
 		selfrenderToJSON.checkAllResultsFetched();
 	}
+	/**
+	 * Converts a json object to an event representation in dhis
+	 * 
+	 * @param object {object} Json object to convert
+	 * 
+	 * @param otherData {object} Additional data to be added to the event like program,eventDate,orgUnit etc
+	 */
 	this.convertToEvent = function(object,otherData){
 		program = self.getProgramByName(self.modalName);
 		var selfConvertToEvent = this;
@@ -380,6 +389,15 @@ dhis2.data.Modal = function (modalName,relations) {
         }
 		return event;
 	}
+	/**
+	 * Save an event from a json object
+	 * 
+	 * @param data {object | array} Json object to be saved
+	 * 
+	 * @param onSuccess {function} Callback function after the result is returned successfully.
+	 * 
+	 * @param (Optional) onError {function} Callback function an error has occured.
+	 */
 	this.save = function(data,otherData,onSuccess,onError){
 		var sendData = {};
 		if(Array.isArray(data)){
@@ -401,9 +419,28 @@ dhis2.data.Modal = function (modalName,relations) {
 		});
 	}
 };
-
+/**
+ * 
+ *	Makes http requests
+ *
+ *	@constructor
+ *	
+ */
 http = {
-	request:function(url,method,data,onSuccess,onError){
+	/**
+	 * Makes a http request
+	 * 
+	 * @param url {string} Url for the request
+	 * 
+	 * @param method {string} Method to be used.
+	 * 
+	 * @param data {object} Data to be sent to the server.
+	 * 
+	 * @param onSuccess {function} Callback function after the result is returned successfully.
+	 * 
+	 * @param (Optional) onError {function} Callback function an error has occured.
+	 */
+	request : function(url,method,data,onSuccess,onError){
 		var xmlhttp = new XMLHttpRequest();
 		xmlhttp.onreadystatechange = function() {
 			if (xmlhttp.readyState == 4 && xmlhttp.status == 200) {
@@ -424,10 +461,28 @@ http = {
 		xmlhttp.setRequestHeader("Content-Type", "application/json");
 		xmlhttp.send(data);
 	},
-	get:function(url, onSuccess,onError) {
+	/**
+	 * Makes a http get request
+	 * 
+	 * @param url {string} Url for the request
+	 * 
+	 * @param onSuccess {function} Callback function after the result is returned successfully.
+	 * 
+	 * @param (Optional) onError {function} Callback function an error has occured.
+	 */
+	get : function(url, onSuccess,onError) {
 		this.request(url,"GET",null,onSuccess,onError);
 	},
-	post:function(url, data,onSuccess,onError) {
+	/**
+	 * Makes a http post request
+	 * 
+	 * @param url {string} Url for the request
+	 * 
+	 * @param onSuccess {function} Callback function after the result is returned successfully.
+	 * 
+	 * @param (Optional)onError {function} Callback function an error has occured.
+	 */
+	post : function(url, data,onSuccess,onError) {
 		this.request(url,"POST",data,onSuccess,onError);
 	}
 }

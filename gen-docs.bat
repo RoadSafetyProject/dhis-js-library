@@ -1,0 +1,1 @@
+jsdoc src/dhis2-library.js -d docs -t doc-template
